@@ -1,0 +1,245 @@
+
+Backpropagation Dense-Layer nach Batch-Normalization-Layer:
+  Frage an [Google]:
+    Wird bei der Backpropagation vom Dense-Layer der resultierende Gradient des
+    Inputs als eingehender Gradient im Batch-Normalization-Layer verrechnet?
+  [Google]s Antwort:
+    Ja, ganz genau.
+    Der Input-Gradient des Dense-Layers ist identisch mit dem
+    eingehenden Gradienten(Upstream Gradient) des Batch-Normalization-Layers.
+    1.Vom Dense-Layer:
+      Der Dense-Layer berechnet den Gradienten bezüglich seiner Eingabe (also dem, was aus dem BN-Layer kam).
+      Diesen bezeichnen wir oft als dL/dx_dense_in.
+    2.Eintritt in den BN-Layer:
+      Dieser Gradient dL/dx_dense_in ist nun der eingehende Gradient für den Batch-Normalization-Layer.
+    3.Verarbeitung im BN-Layer:
+      Der BN-Layer nutzt diesen Gradienten, um seine eigenen lernbaren Parameter (γ und β) zu aktualisieren.
+      Gleichzeitig berechnet er den Gradienten bezüglich seiner eigenen Eingabe (dL/dx_BN_in).
+    4.Weitergabe an das LSTM:
+      Dieser resultierende Gradient des BN-Layers wird dann an das LSTM weitergereicht und dort als
+      "eingehender Gradient" für die Backpropagation Through Time (BPTT) verwendet.
+
+  Zusammenfassend:
+    Ja, der Output-Gradient des Dense-Layers ist der Input-Gradient des BN-Layers,
+    welcher wiederum den Gradienten für das LSTM vorbereitet.
+
+  Frage an [Google]:
+    Wird der eingehende Gradient(Upstream Gradient) des Batch-Normalization-Layers oft auch als dY bezeichnet?
+  [Google]s Antwort:
+    Ja, das ist die absolut gängige Bezeichnung in der Fachliteratur.
+    Das „d“ steht dabei für die Ableitung (Differential) und das „Y“ für den Ausgang (Output) der betrachteten Schicht.
+
+
+DONE
+    Nach DenseLayer wurde backpropagate() und updateWeightsAndBiases() überladen
+    <yHut> aus Argumentenliste von DenseLayer().backpropagation() gestrichen,
+    weil nicht verwendet wird und das nur verwirrt hat!!!!
+
+TODO
+    Dense-Layer Backpropagation implementieren
+    
+
+TODO
+    Dense-Layer
+        In einem LSTM-Modell (Long Short-Term Memory)
+        dient der Dense Layer (vollständig verbundene Schicht) als Ausgangsschicht (Output Layer),
+        um die komplexen, zeitlichen Merkmale, die das LSTM gelernt hat, in eine konkrete Vorhersage umzuwandeln.
+
+
+TODO:
+    Eine längere LSTM_node-Sequenz realisieren,
+    so dass BatchNormalizationLayer und DenseLayer nach Prinzip von
+    DenseLstmArchitectureConstistsAlsoBatchNormailzationLayer.png realisiert werden.
+
+
+
+DONE    [Backpropagation] BatchNormalizationLayer
+
+2603251111 In BatchNormalizationLayer.calcVariance(float[][], float[]) in inneren Schleife wurde
+           dem Aufruf von Math.pow() als Argument für die Potenz <activations[l].length> übergeben,
+           das ist falsch und muss statisch 2 bzw. zum Quadrat sein!
+
+---Das wurde gelöst, indem die HiddenState-Werte direkt nach dem entspr. forward() zwischengespeichert werden---
+Vielleicht ist ArrayList das Problem
+Vielleicht sollte ich das mit einer primitiven Struktur(einem Array) versuchen
+Weil ich mich während der Backpropagation auf die Rücklage/Speicherung berechneter Ergebnisse/Werte verlassen muss.
+---Das wurde gelöst, indem die HiddenState-Werte direkt nach dem entspr. forward() zwischengespeichert werden---
+
+Nachdem das LSTM alle seine Layer bzw. LSTM-Cell-Rows durchgerechnet hat fällt auf,
+dass alle HS-/CS-Werte(von allen LSTM-Cell aus jeder LSTM-Cell-Row) übereinstimmen.
+    -> Das liegt am Scope(Start.class/LSTM_cell.class) aus dem man den Kontext(HiddenState,CellState) betrachtet.
+
+Ein Bsp. das die Ergebnisse aufzeigt, bei einer LSTM-cell-Row Iterierung mit Funktion forwarding()
+Es sieht so aus, als würde am Ende jede LSTM-cell aus der Row den selben HS- und CS- Wert annehmen.
+    -> Betrachtet von Scope Start.class trifft das zu!
+
+Die eingangs-Werte sind: 	Bias(es) sind ausgeschlossen
+							Gewichte wurden aus dem Tutorial-Video übernommen
+							x[t]= (1.0, 0.0, 0.0)				Input
+							X[t]= (0.0, 0.0, 1.0, 0.0, 0.0)
+
+-> Für jede LSTM-cell dieser Layer(LSTM-Cell-Rows) werden immer wieder die selben Eingaben genutzt.
+   die selben Eingaben werden in der selben Reihenfolge mit den selben Funktionen verrechnet.
+   diese Ergebnisse werden immer wieder mit den gleichen Gewichten multipliziert
+   yHat:
+
+[SCOPE: LSTM_cell.forward(float[][])]
+	Iterierung LSTM_cells.get(0,1,2,3,4) aus Cell-Row: LSTM_cells_layers.get(0)
+			HS							CS
+	pre		[0.0, 0.0]					[1.0, 0.0]
+	post	[0.11913299, 0.16028307]	[0.30646122, 0.25845608]
+
+	post	[-0.017535519, 0.26213017]	[-0.043775752, 0.4398468]
+
+	post	[-0.08703387, 0.3253599]	[-0.22064537, 0.56715125]
+
+	post	[-0.12041182, 0.36514565]	[-0.30996448, 0.6564966]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	Iterierung LSTM_cells.get(0,1,2,3,4) aus Cell-Row: LSTM_cells_layers.get(1)
+			HS							CS
+	pre		[0.0, 0.0]					[1.0, 0.0]
+	post	[0.11913299, 0.16028307]	[0.30646122, 0.25845608]
+
+	post	[-0.017535519, 0.26213017]	[-0.043775752, 0.4398468]
+
+	post	[-0.08703387, 0.3253599]	[-0.22064537, 0.56715125]
+
+	post	[-0.12041182, 0.36514565]	[-0.30996448, 0.6564966]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+[SCOPE: Start]	(Also nur das Resultat betrachtet)
+	Resultat LSTM_cells.get(0,1,2,3,4) aus Cell-Row: LSTM_cells_layers.get(0)
+			HS							CS
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	Resultat LSTM_cells.get(0,1,2,3,4) aus Cell-Row: LSTM_cells_layers.get(0)
+			HS							CS
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+	post	[-0.13662946, 0.39074728]	[-0.35507062, 0.7192013]
+
+------------------------------------------------------------------------------------------------------------------------
+
+NOTE:
+    In DenseLstmArchitectureConstistsAlsoBatchNormailzationLayer.png
+        na= 8 -\
+        na= 16--|- referenziert auf die Anzahl der HiddenUnits bzw. die Dimension des Hidden-/CellStates
+        na= 32-/   bzw. die Anzahl der jeweiligen Features
+
+DONE:   Es sollte in LSTM_node.backpropagation() über die Sequenz iteriert werden und
+        nicht per statischem Index darauf verwiesen werden
+
+An BatchNormalizationLayer wird zZ.
+                            Feature1,   Feature2,   Feature3
+    für zB. Sample 1 (x1): [2.0,        5.0,        10.0    ]   //Dimension1 des jeweiligen Features
+            Sample 2 (x2): [4.0,        1.0,        2.0     ]   //Dimension2 des jeweiligen Features
+
+    es wird übergeben   new float[]{2.0f,4f}            //Feature1
+                        new float[]{5.0f,1f}));         //Feature2
+                        new float[]{10.0f,2f}));        //Feature3
+
+
+An dem Diagram kann man sehen wie ein Dense-LSTM aufgebaut ist und wie/wohin die Informationen weitergereicht werden.
+
+
+
+Fully-Connected-Layer(dense-Layer)
+Bi-LSTM
+GRU(Gated Recurrent Unit)
+Attention-Layer
+Batch-Normalization-Layer
+
+https://www.youtube.com/watch?v=fWXIkBHWPHY&lc=Ugz2MoWWc8N3gRCSflZ4AaABAg (10:11)
+Architektur/Schnittstellen
+    In:     CellState(t-1), HiddenState(t-1), x(t)
+    Out:    CellState(t), HiddenState(t), y(t)
+
+CHANGES:    wY[][] aus LSTM_node()-Konstruktor gelöscht, wird erst für forward() gebraucht.
+            Biases bF,bI,bC,bO sind -zum Testzweck- via LSTM_node-Konstruktor definierbar und
+                werden nicht mehr statisch definiert.
+            delLdelZ ist via LSTM_node-Konstruktor definierbar und wird nicht mehr statisch definiert.
+            Target-Outputvalue <y> ist via LSTM_node-Konstruktor definierbar und
+                wird nicht mehr statisch definiert.
+            Die Tests wurden so angepasst, dass die definierten Objekte nicht mehr einzeln pro Test im
+                Test-Stackframe existieren sondern öffentlich für die Klasse.
+
+------------------------------------------------------------------------------------------------------------------------
+IST:    Im Laufe des Trainings ist ein leichtes Wachsen eines Features zu bemerken.
+        Alle anderen Features werden im Laufe des Trainings reduziert.
+Google antwortet:   Keine Reduktion aller Dimensionen: Es ist nicht notwendig, dass jede einzelne Dimension
+                    (z.B. Feature 1, Feature 2, Feature 3) im Fehlervektor einzeln minimiert wird.
+                    Der Optimierer (wie Adam) lernt, die Gewichte so anzupassen, dass der Gesamtfehler sinkt,
+                    auch wenn manche Dimensionen temporär höhere Fehler aufweisen als andere.
+
+------------------------------------------------------------------------------------------------------------------------
+Infolgedessen muss jeder LSTM_node seinen Vorgänger(previous) und Nachfolger(next) kennen
+
+Verwendet zur Berechnung der Änderungsraten von Forget-Gate(17:04){CS} und Output-Gate(14:22){HS}                       //https://www.youtube.com/watch?v=fWXIkBHWPHY&lc=Ugz2MoWWc8N3gRCSflZ4AaABAg
+dHS[t+1]:= der abgeleitete HS[Zukunft]              //das selbe mit dCS[t+1] etc.
+"dHS" steht für abgeleitetes HS ... also die Änderungsrate zum Zeitpunkt [t+1]
+Somit wird Änderungsrate(HS[t] (HS[t]kann natürlich positiv oder negativ sein) ) -währende Backpropagation- von
+hinten[Zukunft] nach vorne[Gegenwart] verändert/aufsummiert/inkrementiert.
+Also beeinflusst die Vergangenheit[t+1] -während der Backpropagation- alle Zell-Status bis zur Gegenwart[t].
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------
+
+
+Der nächste Schritt ist die Aufgabe Werte wie <dHS[t+1]> zurückzuführen.
+Zunächst muss ich mir eine Architektur für eine LSTM-Zelle überlegen.
+Für eine konsistente und schöne Architektur sollten auch Aufgaben
+wie forwarding und backpropagate ordentlich gekapselt werden.
+------------------------------------------------------------------------------------------------------------------------
+--> DAS PROBLEM war eine zu hohe Lernrate ALPHA
+
+Den Loss ohne Biases
+	PRE backpropagation		[0.3053566, -0.66290796, 0.35755134]
+	POST backpropagation	[0.30443212, -0.6517939, 0.34736174]
+Den Loss mit hinzunahme der Biases
+	PRE	backpropagation		[0.29930997, -0.6662679, 0.36695793]
+	POST backpropagation	[0.29482204, -0.654773, 0.35995096]		ohne dass der Bias des OutputGates vias Backpropagation angepasst wurde
+							[0.29503495, -0.6546484, 0.3596135]		nachdem der Bias des OutputGates vias Backpropagation angepasst wurde
+Es ist zu erkennen, dass der Loss bei Hinzunahme der Biases geringer ausfällt
+Es ist zu erkennen, dass der Loss(größer,geringer,geringer) geringer ausfällt wenn auch der OutputGate-Bias via Backpropagation angepasst wird.
+DAS PROBLEM IST(war) HIERBEI eine zu hohe Lernrate ALPHA
+
+------------------------------------------------------------------------------------------------------------------------
+
+Den Loss ohne Biases                ----\
+                                         Diese Ergebnisse miteinander vergleichen
+Den Loss mit hinzunahme der Biases  ----/
+
+Danach prüfen{mit hinzunahme der Biases} ob Loss nach Backpropagation kleiner wird
+
+Den Loss(nach BackpropagationOptimizing) ohne Biases                ----\
+                                         Diese Ergebnisse miteinander vergleichen
+Den Loss(nach BackpropagationOptimizing) mit hinzunahme der Biases  ----/
+
+------------------------------------------------------------------------------------------------------------------------
+
+LSTM_node.forward(float[]) beschreibt öffentliches float[]z
+    Das muss ... für Entwicklungszweck bleibt erstmal so

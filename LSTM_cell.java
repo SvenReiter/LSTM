@@ -1,4 +1,4 @@
-package lstm2603200945;
+package lstm2604131306;
 
 public class LSTM_cell {
     LSTM_cell prevCell, nextCell;
@@ -41,8 +41,8 @@ public class LSTM_cell {
      * @param bF,bI,bC,bO bias-matrices */
     public LSTM_cell(float[]preCs, float[]preHs, float[]xt, float[]y, float[][]wF, float[][]wI, float[][]wC, float[][]wO,
                      float[]bF, float[]bI, float[]bC, float[]bO) {
-        hiddenState= preHs;
-        cellState= preCs;
+        hiddenState = preHs;
+        cellState = preCs;
         this.wF= wF;
         this.wI= wI;
         this.wC= wC;
@@ -98,7 +98,7 @@ public class LSTM_cell {
     /**
      * @param z the neuronalNets logit/final output
      * @return softmax-result of     */
-    float[]softmax(float[]z) {
+    float[]softmaxBeta(float[]z) {
         float[]result= new float[z.length];
         for(int i=0; i<z.length; i++) {
             result[i]= (float)Math.pow(Math.E, z[i]);
@@ -111,6 +111,31 @@ public class LSTM_cell {
             result[i]/= sumOf;
         }
         return result;
+    }
+
+
+    /**
+     * another softmax-implementation
+     * @param logits
+     * @return softmax-result of     */
+    float[] softmax(float[] logits) {
+        float max=0;
+        for(int i=0; i< logits.length; i++) {
+            if(max< logits[i]) {
+                max= logits[i];
+            }
+        }
+        float[]exp_values= new float[logits.length];    //Numerator
+        float sumExpValues= 0;                          //Denominator
+        for(int i=0; i< exp_values.length; i++) {
+            exp_values[i]= (float)Math.exp(logits[i]- max);
+            sumExpValues+= exp_values[i];
+        }
+        float[]probabilities= new float[logits.length];
+        for(int i=0; i< probabilities.length; i++) {
+            probabilities[i]= exp_values[i]/sumExpValues;
+        }
+        return probabilities;
     }
 
     /**
@@ -127,11 +152,14 @@ public class LSTM_cell {
     /**
      * @param wY size of output/logit    */
     public void forward(float[][]wY) {
+        // sowohl cellState[] als auch hiddenState[] müssen vom Resultat der vorherigen Zelle übernommen werden
+        hiddenState= prevCell.dHSt();
+        cellState= prevCell.dCSt();
         for(int i=0; i<cellState.length; i++) {
             cellState[i]*=forgetGate.getResult()[i];
         }
         for(int i=0; i<cellState.length; i++) {
-            cellState[i]+= inputGate.getResult()[i] * candidateGate.getResult()[i];
+            cellState[i]+=inputGate.getResult()[i] * candidateGate.getResult()[i];
         }
         for(int i=0; i<hiddenState.length; i++) {
             hiddenState[i]= (float) (TANH.calc(cellState[i]) * outputGate.getResult()[i]);
@@ -180,7 +208,7 @@ public class LSTM_cell {
         }
         //delLdelWo[][] is calculated
         //BiasIncrement
-        float[]sigmoidDerivativeOfOsBias= new float[]{  (float)SIGMOID_DERIVATIVE.calc(bO[0]),
+/*        float[]sigmoidDerivativeOfOsBias= new float[]{  (float)SIGMOID_DERIVATIVE.calc(bO[0]),
                 (float)SIGMOID_DERIVATIVE.calc(bO[1])};
 
         for(int i=0; i< delLbO.length; i++) {
@@ -189,7 +217,7 @@ public class LSTM_cell {
         outputGate.setBias(delLbO);                                                                                     //Bias geupdated
         outputGate.calculateResult();                                                                                   //Auf Basis des geupdateten Output-Gate-Biases wird die Output-Gate-Ausgabe berechnet/aktualisiert
         //...BiasIncrement
-
+*/
         delLdelWf= new float[forgetGate.getResult().length][Xt.length];
         float[]tanhDerivativeOfCS= new float[cellState.length];
         for(int i=0; i<tanhDerivativeOfCS.length; i++) {
@@ -205,7 +233,7 @@ public class LSTM_cell {
         }
         //delLdelWf[][] is calculated
         //BiasIncrement
-        float[]sigmoidDerivativeOfFsBias= new float[]{  (float)SIGMOID_DERIVATIVE.calc(bF[0]),
+/*        float[]sigmoidDerivativeOfFsBias= new float[]{  (float)SIGMOID_DERIVATIVE.calc(bF[0]),
                 (float)SIGMOID_DERIVATIVE.calc(bF[1])};
 
         for(int i=0; i< delLbO.length; i++) {
@@ -215,7 +243,7 @@ public class LSTM_cell {
         forgetGate.setBias(delLbF);                                                                                     //Bias geupdated
         forgetGate.calculateResult();                                                                                   //Auf Basis des geupdateten Forget-Gate-Biases wird die Forget-Gate-Ausgabe berechnet/aktualisiert
         //...BiasIncrement
-
+*/
         delLdelWi= new float[inputGate.getResult().length][Xt.length];
         float[]sigmoidDerivativeOfI= new float[]{   (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult()[0]),
                 (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult()[1])};
@@ -227,7 +255,7 @@ public class LSTM_cell {
         }
         //delLdelWi[][] is calculated
         //BiasIncrement
-        float[]sigmoidDerivativeOfIsBias= new float[]{  (float)SIGMOID_DERIVATIVE.calc(bI[0]),
+/*        float[]sigmoidDerivativeOfIsBias= new float[]{  (float)SIGMOID_DERIVATIVE.calc(bI[0]),
                 (float)SIGMOID_DERIVATIVE.calc(bI[1])};
 
         for(int i=0; i< delLbI.length; i++) {
@@ -237,7 +265,7 @@ public class LSTM_cell {
         inputGate.setBias(delLbI);
         inputGate.calculateResult();
         //...BiasIncrement
-
+*/
         delLdelWc= new float[candidateGate.getResult().length][Xt.length];
         float[]tanhDerivativeOfC= new float[candidateGate.getResult().length];
         for(int i=0; i<tanhDerivativeOfC.length; i++) {
@@ -251,7 +279,7 @@ public class LSTM_cell {
         }
         //delLdelWc[][] is calculated
         //BiasIncrement
-        float[]tanhDerivativeOfCsBias= new float[]{  (float)TANH_DERIVATIVE.calc(bC[0]),
+/*        float[]tanhDerivativeOfCsBias= new float[]{  (float)TANH_DERIVATIVE.calc(bC[0]),
                 (float)TANH_DERIVATIVE.calc(bC[1])};
 
         for(int i=0; i< delLbC.length; i++) {
@@ -261,6 +289,7 @@ public class LSTM_cell {
         candidateGate.setBias(delLbC);                                                                                  //Bias geupdated
         candidateGate.calculateResult();                                                                                //Auf Basis des geupdateten Forget-Gate-Biases wird die Forget-Gate-Ausgabe berechnet/aktualisiert
         //...BiasIncrement
+*/
     }
 
     /**

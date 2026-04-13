@@ -1,4 +1,4 @@
-package lstm2603200945;
+package lstm2604131306;
 
 public class Gate {
     private Func func;
