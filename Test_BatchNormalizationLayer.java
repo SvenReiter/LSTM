@@ -1,10 +1,10 @@
-package lstm2604131306;
+package lstm2604221130;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-public class Test_BatchNormalization_Layer {
+public class Test_BatchNormalizationLayer {
     final BatchNormalizationLayer batchNormalizationLayer= new BatchNormalizationLayer();
     float BETA= 0.f;
     float DELTA= 1e-3f;

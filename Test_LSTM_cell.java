@@ -1,4 +1,4 @@
-package lstm2604131306;
+package lstm2604221130;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,17 +30,17 @@ public class Test_LSTM_cell {
     final LSTM_cell node= new LSTM_cell( new float[]{1f,0f}, new float[]{0f,0f},
                                          new float[]{1f,0f,0f}, new float[]{0,1,0}, wF, wI, wC, wO,
                                          new float[]{0.f, 0.f}, new float[]{0.f, 0.f},
-                                         new float[]{0.f, 0.f}, new float[]{0.f, 0.f});
+                                         new float[]{0.f, 0.f}, new float[]{0.f, 0.f}, 0.1f, true, false, false);
 
     final LSTM_cell nextNode= new LSTM_cell(new float[]{1f,0f}, new float[]{0f,0f},
                                             new float[]{1f,0f,0f}, new float[]{0,1,0}, wF, wI, wC, wO,
                                             new float[]{0.f, 0.f}, new float[]{0.f, 0.f},
-                                            new float[]{0.f, 0.f}, new float[]{0.f, 0.f});
+                                            new float[]{0.f, 0.f}, new float[]{0.f, 0.f}, 0.1f, true, false, false);
 
     final LSTM_cell prevNode= new LSTM_cell(new float[]{1f,0f}, new float[]{0f,0f},
                                             new float[]{1f,0f,0f}, new float[]{0,1,0}, wF, wI, wC, wO,
                                             new float[]{0.f, 0.f}, new float[]{0.f, 0.f},
-                                            new float[]{0.f, 0.f}, new float[]{0.f, 0.f});
+                                            new float[]{0.f, 0.f}, new float[]{0.f, 0.f}, 0.1f, true, false, false);
 
     @Test
     void testResultingWeightAdjustmentsAfterForwarding() {
@@ -63,9 +63,7 @@ public class Test_LSTM_cell {
         node.backpropagate(node.xt, node.Xt, wY);
         assertEquals(node.getDelLdelW('o')[0][2], 0.009, DELTA);
         assertEquals(node.getDelLdelW('o')[1][2], -0.0087, DELTA);
-//      assertEquals(node.getDelLdelW('f')[0][2], 0.011, DELTA);                                                      //Evt ergab sich Änderung weil ich bei Biases einbeziehe
-//      assertEquals(node.getDelLdelW('f')[0][2], 0.245, DELTA);
-//        assertEquals(node.getDelLdelW('f')[1][2], 0.0, DELTA);
+
         assertEquals(node.getDelLdelW('i')[0][2], -0.004, DELTA);
         assertEquals(node.getDelLdelW('i')[1][2], -0.014, DELTA);
         assertEquals(node.getDelLdelW('c')[0][2], 0.02, DELTA);

@@ -1,4 +1,4 @@
-package lstm2604131306;
+package lstm2604221130;
 
 import org.junit.jupiter.api.Test;
 
@@ -6,6 +6,112 @@ import static java.lang.Math.log;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class Test_DenseLayer {
+
+    @Test
+    void testDenseLayer_ForwardingBackpropagationMitAktivierungsfunktionMitBiasF() {
+        /*  Google: "LSTM was macht ein dense-layer? Gib mir ein rechenbeispiel für forwardpass und backpropagation mit
+                     input={0.5, -0.2, 0.1, 0.8} und Gewichten={{0.2, 0.3}, {0.5, -0.3}, {-0.1, 0.6}, {0.4, 0.1}},
+                     bias={0.1, 0.2} und fehlerGradient={0.4, 1.2}."
+         */
+        float DELTA= 1e-3f;
+        float[] hT= new float[]{0.5f, -0.2f, 0.1f, 0.8f};                             //input[als Zeilenvektor]
+        float[][] w= new float[][]{{0.2f, 0.3f}, {0.5f, -0.3f}, {-0.1f, 0.6f}, {0.4f, 0.1f}};   //gewichte[als Spaltenvektor]
+        float[] b= new float[]{0.1f, 0.2f};                                     //bias
+
+        DenseLayer denseLayer= new DenseLayer(hT, w, b);
+        assertArrayEquals(denseLayer.getOutput(), new float[]{0.6011f, 0.6341f}, DELTA);   //:={sigmoid(-0.9),sigmoid(1.2)}
+        float[] fehlerGradient=new float[]{0.4f, 1.2f};
+        float[][]backpropagatededGradients= denseLayer.backpropagate(fehlerGradient, hT, w);
+        assertArrayEquals(backpropagatededGradients[0], new float[]{0.2f, -0.08f, 0.04f, 0.32f}, DELTA);
+        assertArrayEquals(backpropagatededGradients[1], new float[]{0.6f, -0.24f, 0.12f, 0.96f}, DELTA);
+
+        assertArrayEquals(denseLayer.getWeights()[0], new float[]{0.18f, 0.24f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[1], new float[]{0.508f, -0.276f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[2], new float[]{-0.104f, 0.588f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[3], new float[]{0.368f, 0.004f}, DELTA);
+        assertArrayEquals(denseLayer.getBiases(), new float[]{0.06f, 0.08f}, DELTA);
+    }
+
+    @Test
+    void testDenseLayer_ForwardingBackpropagationMitAktivierungsfunktionMitBiasE() {
+        /*  Google: "LSTM was macht ein dense-layer? Gib mir ein rechenbeispiel für forwardpass und backpropagation mit
+                     input={1, 0, 2, -1, 0.5} und
+                     Gewichten={{0.2, -0.3}, {0.5, 0.1}, {-0.1, 0.4}, {0.8, -0.2}, {-0.4, 0.6}}, bias={0.1, 0.2} und
+                     fehlerGradient={1.0, 1.0}."
+         */
+        float DELTA= 1e-3f;
+        float[] hT= new float[]{1f, 0f, 2f, -1f, 0.5f};                             //input[als Zeilenvektor]
+        float[][] w= new float[][]{{0.2f, -0.3f}, {0.5f, 0.1f}, {-0.1f, 0.4f}, {0.8f, -0.2f}, {-0.4f, 0.6f}};   //gewichte[als Spaltenvektor]
+        float[] b= new float[]{0.1f, 0.2f};                                     //bias
+
+        DenseLayer denseLayer= new DenseLayer(hT, w, b);
+        assertArrayEquals(denseLayer.getOutput(), new float[]{0.2891f, 0.7685f}, DELTA);   //:={sigmoid(-0.9),sigmoid(1.2)}
+        float[] fehlerGradient=new float[]{1f, 1f};
+        float[][]backpropagatededGradients= denseLayer.backpropagate(fehlerGradient, hT, w);
+        assertArrayEquals(backpropagatededGradients[0], new float[]{1f, 0f, 2.0f, -1.0f, 0.5f}, DELTA);
+        assertArrayEquals(backpropagatededGradients[1], new float[]{1f, 0f, 2.0f, -1.0f, 0.5f}, DELTA);
+
+        assertArrayEquals(denseLayer.getWeights()[0], new float[]{0.1f, -0.4f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[1], new float[]{0.5f, 0.1f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[2], new float[]{-0.3f, 0.2f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[3], new float[]{0.9f, -0.1f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[4], new float[]{-0.45f, 0.55f}, DELTA);
+        assertArrayEquals(denseLayer.getBiases(), new float[]{0f, 0.1f}, DELTA);
+    }
+
+    @Test
+    void testDenseLayer_ForwardingBackpropagationMitAktivierungsfunktionMitBiasD() {
+        /*  Google: "LSTM was macht ein dense-layer? Gib mir ein rechenbeispiel für forwardpass und backpropagation mit
+                     input={5 dimensional}, und zufälligen Gewichten, bias={0.1, 0.2} und
+                     fehlerGradient={1.0, 1.0}."
+         */
+        float DELTA= 1e-3f;
+        float[] hT= new float[]{1f, 2f, 3f, 4f, 5f};                             //input[als Zeilenvektor]
+        float[][] w= new float[][]{{0.5f, 0.3f}, {-0.2f, 0.7f}, {0.1f, -0.5f}, {0.8f, 0.2f}, {-0.4f, 0.6f}};   //gewichte[als Spaltenvektor]
+        float[] b= new float[]{0.1f, 0.2f};                                     //bias
+
+        DenseLayer denseLayer= new DenseLayer(hT, w, b);
+        assertArrayEquals(denseLayer.getOutput(), new float[]{0.8455f, 0.9852f}, DELTA);   //:={sigmoid(1.7),sigmoid(4.2)}
+        float[] fehlerGradient=new float[]{0.131f, 0.015f};
+        float[][]backpropagatededGradients= denseLayer.backpropagate(fehlerGradient, hT, w);
+        assertArrayEquals(backpropagatededGradients[0], new float[]{0.131f, 0.262f, 0.393f, 0.524f, 0.655f}, DELTA);
+        assertArrayEquals(backpropagatededGradients[1], new float[]{0.015f, 0.030f, 0.045f, 0.060f, 0.075f}, DELTA);
+
+        assertArrayEquals(denseLayer.getWeights()[0], new float[]{0.4869f, 0.2985f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[1], new float[]{-0.2262f, 0.6970f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[2], new float[]{0.0607f, -0.5045f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[3], new float[]{0.7476f, 0.1940f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[4], new float[]{-0.4655f, 0.5925f}, DELTA);
+        assertArrayEquals(denseLayer.getBiases(), new float[]{0.0869f, 0.1985f}, DELTA);
+        /*
+            Was ist passiert?
+            Da wir im Backpropagation-Schritt einen positiven Fehler-Gradienten (1.0, 1.0) angenommen haben
+            (was bedeutet: "Der Output ist zu hoch"), hat der Optimizer die Gewichte und Biases verringert.
+            Wie du siehst, sind beide Output-Werte im zweiten Durchgang deutlich gesunken.
+         */
+    }
+
+    @Test
+    void testDenseLayer_ForwardingBackpropagationMitAktivierungsfunktionMitBiasC() {
+        /*  Google: "LSTM was macht ein dense-layer?
+                     Gib mir ein Rechenbeispiel für forwardpass mit 4 dimensionalem input und backpropagation. "
+         */
+        float DELTA= 1e-3f;
+        float[] hT= new float[]{1.0f, 0.f, 2f, -1f};                 //input[als Zeilenvektor]
+        float[][] w= new float[][]{{0.5f}, {0.2f}, {-0.1f}, {0.8f}};      //gewichte[als Spaltenvektor bzw transponiert]
+        float[] b= new float[]{0.1f};                                     //bias
+
+        DenseLayer denseLayer= new DenseLayer(hT, w, b);
+        assertArrayEquals(denseLayer.getOutput(), new float[]{0.4013f}, DELTA);   //:={sigmoid(-0.4)}
+        float[] fehlerGradient=new float[]{-3f};
+        assertArrayEquals(denseLayer.backpropagate(fehlerGradient, hT, w, true), new float[]{-3f, 0f, -6f, 3f}, DELTA);
+
+        assertArrayEquals(denseLayer.getWeights()[0], new float[]{0.8f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[1], new float[]{0.2f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[2], new float[]{0.5f}, DELTA);
+        assertArrayEquals(denseLayer.getWeights()[3], new float[]{0.5f}, DELTA);
+        assertArrayEquals(denseLayer.getBiases(), new float[]{0.4f}, DELTA);
+    }
 
     @Test
     void testDenseLayer_ForwardingBackpropagationMitAktivierungsfunktionMitBiasB() {
@@ -20,7 +126,7 @@ public class Test_DenseLayer {
         DenseLayer denseLayer= new DenseLayer(hT, w, b);
         assertArrayEquals(denseLayer.getOutput(), new float[]{0.5325f}, DELTA);   //:={sigmoid(0.13)}
         float[] fehlerGradient=new float[]{-0.37f};
-        assertArrayEquals(denseLayer.backpropagate(fehlerGradient, hT, w), new float[]{-0.074f, 0.111f, -0.185f, -0.037f}, DELTA);
+        assertArrayEquals(denseLayer.backpropagate(fehlerGradient, hT, w, true), new float[]{-0.37f, -0.185f, 0.074f, -0.296f}, DELTA);
 
         assertArrayEquals(denseLayer.getWeights()[0], new float[]{0.237f}, DELTA);
         assertArrayEquals(denseLayer.getWeights()[1], new float[]{-0.2815f}, DELTA);
@@ -43,7 +149,7 @@ public class Test_DenseLayer {
         DenseLayer denseLayer= new DenseLayer(hT, w, b);
         assertArrayEquals(denseLayer.getOutput(), new float[]{0.55971f, 0.6748f}, DELTA);   //:={sigmoid(0.24),sigmoid(0.73)}
         float[] fehlerGradient=new float[]{1f, 1f};
-        assertArrayEquals(denseLayer.backpropagate(fehlerGradient, hT, w), new float[]{0.5f, 0.7f, 0.9f}, DELTA);
+        assertArrayEquals(denseLayer.backpropagate(fehlerGradient, hT, w, false), new float[]{0.5f, 0.7f, 0.9f}, DELTA);
 
         assertArrayEquals(denseLayer.getWeights()[0], new float[]{0f, 0.3f}, DELTA);
         assertArrayEquals(denseLayer.getWeights()[1], new float[]{0.15f, 0.45f}, DELTA);

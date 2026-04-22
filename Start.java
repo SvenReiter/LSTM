@@ -1,4 +1,4 @@
-package lstm2604131306;
+package lstm2604221130;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +48,7 @@ public class Start {
                             new float[]{1f,0f,0f},                                                                      //Input x(t)
                             new float[]{0,1,0},
                             wF, wI, wC, wO,
-                            bF, bI, bC, bO
+                            bF, bI, bC, bO, 0.1f, true, false, true
                     )
             );
         }
@@ -56,7 +56,7 @@ public class Start {
             if(i==0 && LSTM_cells_firstLayer.size()>0 && (i+1)<=(LSTM_cells_firstLayer.size()-1)) {                     //Wenn erste LSTM-cell in Sequenz=> braucht kein <prevCell>
                 LSTM_cells_firstLayer.get(i).prevCell=
                         new LSTM_cell(new float[]{1f, 0f}, new float[]{0f, 0f}, new float[]{1f,0f,0f},
-                                      new float[]{0,1,0}, wF, wI, wC, wO, bF, bI, bC, bO);
+                                      new float[]{0,1,0}, wF, wI, wC, wO, bF, bI, bC, bO, 0.1f, true, false, true);
                 LSTM_cells_firstLayer.get(i).nextCell= LSTM_cells_firstLayer.get(i+1);
             }else if(i>0 && i==(NUMBER_CELLS_PER_CHAIN-1)) {                                                            //Wenn letzte LSTM-cell in Sequenz=> braucht kein <nextcell>
                 LSTM_cells_firstLayer.get(i).prevCell= LSTM_cells_firstLayer.get(i-1);
@@ -75,7 +75,7 @@ public class Start {
                             batchNormalizationLayer_first.getNormalization()[i],                                               //Input x(t)
                             new float[]{0,1,0},
                             wF_sec, wI_sec, wC_sec, wO_sec,
-                            bF, bI, bC, bO
+                            bF, bI, bC, bO, 0.1f, true, false, true
                     )
             );
         }
@@ -83,7 +83,7 @@ public class Start {
             if(i==0 && LSTM_cells_secondLayer.size()>0 && (i+1)<=(LSTM_cells_secondLayer.size()-1)) {                   //Wenn erste LSTM-cell in Sequenz=> braucht kein <prevCell>
                 LSTM_cells_secondLayer.get(i).prevCell= new LSTM_cell(new float[]{1f, 0f}, new float[]{0f, 0f},
                                                         new float[]{1f,0f,0f}, new float[]{0,1,0},
-                                                        wF, wI, wC, wO, bF, bI, bC, bO);
+                                                        wF, wI, wC, wO, bF, bI, bC, bO, 0.1f, true, false, true);
                 LSTM_cells_secondLayer.get(i).nextCell= LSTM_cells_secondLayer.get(i+1);
             }else if(i>0 && i==(NUMBER_CELLS_PER_CHAIN-1)) {                                                            //Wenn letzte LSTM-cell in Sequenz=> braucht kein <nextcell>
                 LSTM_cells_secondLayer.get(i).prevCell= LSTM_cells_secondLayer.get(i-1);
@@ -103,7 +103,7 @@ public class Start {
                             batchNormalizationLayer_second.getNormalization()[i],                                              //Input x(t)
                             new float[]{0,1,0},
                             wF_sec, wI_sec, wC_sec, wO_sec,
-                            bF, bI, bC, bO
+                            bF, bI, bC, bO, 0.1f, true, false, true
                     )
             );
         }
@@ -111,7 +111,7 @@ public class Start {
             if(i==0 && LSTM_cells_thirdLayer.size()>0 && (i+1)<=(LSTM_cells_thirdLayer.size()-1)) {                     //Wenn erste LSTM-cell in Sequenz=> braucht kein <prevCell>
                 LSTM_cells_thirdLayer.get(i).prevCell= new LSTM_cell(new float[]{1f, 0f}, new float[]{0f, 0f},
                                                                      new float[]{1f,0f,0f}, new float[]{0,1,0},
-                                                                     wF, wI, wC, wO, bF, bI, bC, bO);
+                                                                     wF, wI, wC, wO, bF, bI, bC, bO, 0.1f, true, false, true);
                 LSTM_cells_thirdLayer.get(i).nextCell= LSTM_cells_thirdLayer.get(i+1);
             }else if(i>0 && i==(NUMBER_CELLS_PER_CHAIN-1)) {                                                            //Wenn letzte LSTM-cell in Sequenz=> braucht kein <nextcell>
                 LSTM_cells_thirdLayer.get(i).prevCell= LSTM_cells_thirdLayer.get(i-1);
