@@ -1,4 +1,87 @@
 
+Die Eingabeform bei LSTMs ist üblicherweise (Batchgröße, Timesteps, Features)
+Unterschie: {Batchgröße, Timestep}
+    Batchgröße: Gibt an, wie viele unabhängige Sequenzen (Beispiele) gleichzeitig verarbeitet werden,
+                bevor die Gewichte des Modells aktualisiert werden.
+                Anstatt ein einzelnes Beispiel zu trainieren,
+                werden mehrere (z.B. 32 oder 64) Sequenzen parallel verarbeitet,
+                um den Lernprozess zu beschleunigen und stabiler zu machen.
+                => BatchNormalizationLayer
+    TimeStep:   Bestimmt die Länge einer einzelnen Sequenz,
+                also über wie viele Zeitpunkte in die Vergangenheit das LSTM "zurückschaut"
+    {Batchgröße, TimeStep}- Beispiel:   Bei Aktienkursen (30 Tage Vorhersage)
+                                        mit einer Batchgröße von 64 ist die Batchgröße = 64 (Anzahl der Beispiele) und
+                                        die TimeStep = 30 (Länge der Sequenz).
+
+    Batch:      BatchSize:          Wie viele unabhängige Beispiele parallel durch das Modell fließen.
+                Sequence Length:    Wie viele Zeitschritte (Wörter/Messpunkte) nacheinander verarbeitet werden.
+                Input Features:     Ein Eingabemerkmal, ist eine einzelne Variable oder ein Messwert innerhalb einer
+                                    zeitlich geordneten Datensequenz.
+                Beispiel:   Stell dir vor, du überwachst die Temperatur in zwei verschiedenen Gewächshäusern,
+                            um einen Alarm auszulösen, wenn es zu heiß wird.
+                    Input Features  = 1: Wir messen nur einen Wert, die Temperatur (z. B. 22.5).                        //x[t] bzw. <inputs[t]>
+                    Sequence Length = 4: Wir schauen uns immer die letzten 4 Stunden an, um einen Trend zu erkennen.    //<timeStep>
+                    Batch Size      = 2: Wir analysieren 2 Gewächshäuser gleichzeitig.                                  //Ich teste in AnotherTest_LSTM_cell immer einen Batch
+
+    Features:   In einem LSTM-Netzwerk verarbeitet die LSTM-Zelle die Features.
+                Die Features (deine Eingangsdaten, zB. Messwerte oder Wort-Vektoren)
+                fließen in jedem TimeStep als Eingangsvektor <xt> direkt in die LSTM-Zelle.
+                    Ein Beispiel zur Verdeutlichung:
+                      Wenn du Wetterdaten analysierst,
+                      sind „Temperatur“ und „Luftfeuchtigkeit“ deine Features.
+                      Ein TimeStep ist ein konkreter Zeitpunkt (z. B. 12:00 Uhr).
+                      Die Features von 12:00 Uhr werden in die LSTM-Zelle gespeist.
+                      Die Zelle berechnet daraus (und aus dem Wissen der vorherigen Stunden),
+                      wie sich der interne Speicher verändert.
+    LSTM-Zelle: Die grundlegende Einheit, die bei jedem Zeitschritt Eingaben verarbeitet.
+                Im Gegensatz zu einfachen RNNs enthält eine
+                LSTM-Zelle Gates (Eingabe-, Vergessens-, Kandidaten- und Ausgabe-Gate),
+                die den Informationsfluss regulieren und es ihr dadurch ermöglichen,
+                langfristige Abhängigkeiten zu erlernen.
+
+
+
+
+
+LSTM-Trainingsdaten/-Features/-Sequenzen:
+  Frage an [Google]:
+    lstm gehören zu einem feature n Zeitschritte?
+  [Google]s Antwort:
+    Ja, LSTM-Netzwerke (Long Short-Term Memory) sind darauf ausgelegt, sequentielle Daten zu verarbeiten,
+    bei denen eine Eingabe (ein "Feature" oder eine Menge von Features) über Zeitschritte hinweg analysiert wird.
+    Hier sind die Details dazu:
+        Sequentielle Verarbeitung: Ein LSTM verarbeitet Daten nicht als isolierte Punkte, sondern in Sequenzen.
+                                   Ein "Zeitschritt" ist dabei ein einzelner Punkt in dieser Sequenz
+                                   (z.B. ein Wort in einem Satz oder ein Messwert zu einem bestimmten Zeitpunkt).
+        Struktur: Bei der Eingabe in ein LSTM-Modell (z. B. in TensorFlow/Keras) wird die
+                  Datenstruktur typischerweise als 3D-Tensor definiert: (BatchSize, TimeSteps, Features).
+                        BatchSize:      Die Anzahl der Trainingsbeispiele (Sequenzen), die dem Modell gleichzeitig
+                                        übergeben werden, bevor dessen interne Parameter (Gewichte) aktualisiert werden
+                        TimeSteps(n):   Die Länge der Sequenz,
+                                        also über wie viele Zeitschritte sich das "Gedächtnis" erstreckt.
+                        Features:       Die Anzahl der Messwerte pro Zeitschritt.
+        Langzeitabhängigkeiten: Die Kernkompetenz von LSTMs ist es, Informationen über diese Zeitschritte hinweg
+                                zu behalten (durch den Zellzustand/Cell State), um Muster zu erkennen.
+
+Kurztipp für die Praxis:
+    Die rekurrenten Gewichte Uf,Ui,Uc,Uo sind quadratische Matrizen (Dimension: <hidden_size> x <hidden_size>),
+    während Wf,Wi,Wc,Wo die Dimension <hidden_size> x <input_size> hat.
+    Sie sind das "Kurzzeitgedächtnis" für die Steuerung des "Langzeitgedächtnisses" (CS[t]).
+
+TODO    Der/Die Rechenweg/e für die Verwendung der rekurrenten Gewichte Uf,Ui,Uc,Uo während Backpropagation wird in
+        AnotherTest_LSTM_cell.testsUWeights() beschrieben und getestet(angelehnt auf ein Rechenbeispiel von Google-KI).
+        Nachvollziehen
+        Validieren
+        Implementieren
+        *
+        FORWARDING den Rechenwege bzgl. rekurrenten Gewichte Uf,Ui,Uc,Uo nachvollziehen
+        Frahe an [Google]:
+          LSTM wird während Forwarding in jedem Gate bei der Berechnung die rekurrenten Gewichte verwendet werden?
+        [Google]s Antwort:
+          Ja, das ist absolut korrekt. Bei einem Long Short-Term Memory (LSTM) Netzwerk werden die rekurrenten
+          Gewichte(die Verbindungen vom vorherigen Hidden State HSt−1) in jedem der vier Haupt-Gates verwendet.
+
+
 Backpropagation Dense-Layer nach Batch-Normalization-Layer:
   Frage an [Google]:
     Wird bei der Backpropagation vom Dense-Layer der resultierende Gradient des

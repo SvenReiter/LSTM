@@ -1,4 +1,4 @@
-package lstm2604221130;
+package lstm2605111326;
 
 public class LSTM_cell {
     LSTM_cell prevCell, nextCell;
@@ -6,7 +6,7 @@ public class LSTM_cell {
     //    final Func SIGMOID_DERIVATIVE= x->(SIGMOID.calc(x)*(1-SIGMOID.calc(x)));
     final Func SIGMOID_DERIVATIVE= x->(x[0]*(1-x[0]));
     final Func TANH= x-> (float)((Math.exp(x[0])-Math.exp(-x[0])) / (Math.exp(x[0])+Math.exp(-x[0])));
-    final Func TANH_DERIVATIVE= x->(1.0 - (TANH.calc(x)*TANH.calc(x)));
+    final Func TANH_DERIVATIVE= x->(1.0 - (Math.pow(x[0], 2)));
     final Gate forgetGate;                                                                                              //Entscheidet, was vergessen wird.
     final Gate inputGate;                                                                                               //Entscheidet, welche neuen Informationen gespeichert werden.
     final Gate candidateGate;                                                                                           //Erstellt neue Kandidatenwerte.
@@ -31,7 +31,71 @@ public class LSTM_cell {
      *  Anschließend folgt ein SOFTMAX-Layer um die Wahrscheinlichkeiten für die Fehlerberechnung ausgehend von
      *  den Werten aus dem fully-connected layer zu bestimmen.
      */
+    /** Überladung um rekurrente Gewichte Gate-spezifisch zu definieren
+     * @param preCs the currents nodes previous[t-1] CS-value
+     * @param preHs the currents nodes previous[t-1] HS-value
+     * @param xt current[t] input
+     * @post concatenated version of preHs[] and inputX[]
+     *       The concatenated version depicts the assumed input.
+     * @param y expected result
+     * @param wF,wI,wC,wO internal weights-matrices
+     * @param bF,bI,bC,bO bias-matrices
+     * @param u_f,u_i,u_c,u_o  rekurrente Gewichte und müssen der Dimensionierung des HiddenStates entspr.
+     * @param concatXt (dirtyHack)
+     * @param mulMitGetrimmtemInput (dirtyHack)dieser Flag wird weitergereicht bis zu Gate().calculateResult,
+     *                               damit wird der Multiplikation mitgeteilt,
+     *                               ob der input oder eine konkatenierte Version von input multipliziert werden soll*/
+    public LSTM_cell(float[]preCs, float[]preHs, float[]xt, float[]y, float[][]wF, float[][]wI, float[][]wC, float[][]wO,
+                     float[]bF, float[]bI, float[]bC, float[]bO, float u_f, float u_i, float u_c, float u_o,
+                     boolean concatXt, boolean mulMitGetrimmtemInput, boolean concatXtPrev) {
+        hiddenState = preHs;
+        cellState = preCs;
+        this.wF= wF;
+        this.wI= wI;
+        this.wC= wC;
+        this.wO= wO;
+        this.xt= xt;
+        this.y= y;
+        this.bF= bF;
+        this.bI= bI;
+        this.bC= bC;
+        this.bO= bO;
+        delLbF= new float[bF.length];
+        delLbI= new float[bI.length];
+        delLbC= new float[bC.length];
+        delLbO= new float[bO.length];
+        delLdelZ= new float[y.length];
+        int t=0;
 
+        if(concatXt) {
+            Xt= new float[preHs.length+ xt.length];
+            if(concatXtPrev) {
+                for (int i = 0; i < xt.length; i++) {
+                    Xt[i] = xt[i];                           //nach Xt[] werden zuerst die input-Werte aus xt[] geschrieben...
+                }
+                for (int i = 0; i < preHs.length; i++) {
+                    Xt[xt.length + i] = preHs[i];              //...danach die Werte aus preHs[].
+                }
+            }else {
+                for(int i=0; i<preHs.length; i++) {
+                    Xt[i]=preHs[i];                         //nach Xt[] werden zuerst die Werte aus preHs[] geschrieben...
+                }
+                for(int i=0; i<xt.length; i++) {
+                    Xt[preHs.length+i]=xt[i];               //...danach die input-Werte aus xt[].
+                }
+            }
+        }else {
+            Xt = new float[xt.length];
+            for (int i = 0; i < xt.length; i++) {
+                Xt[i] = xt[i];
+            }
+        }
+
+        forgetGate= new Gate(SIGMOID, Xt, wF, bF, u_f, preHs, t);
+        inputGate= new Gate(SIGMOID, Xt, wI, bI, u_i, preHs, t);
+        candidateGate= new Gate(TANH, Xt, wC, bC, u_c, preHs, t);
+        outputGate= new Gate(SIGMOID, Xt, wO, bO, u_o, preHs, t);
+    }
     /**
      * @param preCs the currents nodes previous[t-1] CS-value
      * @param preHs the currents nodes previous[t-1] HS-value
@@ -66,6 +130,7 @@ public class LSTM_cell {
         delLbC= new float[bC.length];
         delLbO= new float[bO.length];
         delLdelZ= new float[y.length];
+        int t=0;
 
         if(concatXt) {
             Xt= new float[preHs.length+ xt.length];
@@ -91,10 +156,10 @@ public class LSTM_cell {
             }
         }
 
-        forgetGate= new Gate(SIGMOID, Xt, wF, bF, u, preHs, mulMitGetrimmtemInput);
-        inputGate= new Gate(SIGMOID, Xt, wI, bI, u, preHs, mulMitGetrimmtemInput);
-        candidateGate= new Gate(TANH, Xt, wC, bC, u, preHs, mulMitGetrimmtemInput);
-        outputGate= new Gate(SIGMOID, Xt, wO, bO, u, preHs, mulMitGetrimmtemInput);
+        forgetGate= new Gate(SIGMOID, Xt, wF, bF, u, preHs, t);
+        inputGate= new Gate(SIGMOID, Xt, wI, bI, u, preHs, t);
+        candidateGate= new Gate(TANH, Xt, wC, bC, u, preHs, t);
+        outputGate= new Gate(SIGMOID, Xt, wO, bO, u, preHs, t);
     }
 
     public float[] dCSt() {
@@ -179,19 +244,19 @@ public class LSTM_cell {
      * @param wY size of output/logit
      * @post yHat contains output/logit
      * @post <hiddenState> and <cellState> modified */
-    public void forward(float[][]wY) {
+    public void forward(float[][]wY, int t) {
         // sowohl cellState[] als auch hiddenState[] müssen vom Resultat der vorherigen Zelle übernommen werden
         hiddenState= prevCell.dHSt();
         cellState= prevCell.dCSt();
 
         for(int i=0; i<cellState.length; i++) {
-            cellState[i]*=forgetGate.getResult()[i];
+            cellState[i]*=forgetGate.getResult(t)[i];
         }
-        for(int i=0; i<cellState.length; i++) {
-            cellState[i]+=inputGate.getResult()[i] * candidateGate.getResult()[i];
+        for(int i=0; i<candidateGate.getResult(t).length; i++) {
+            cellState[i]+=inputGate.getResult(t)[i] * candidateGate.getResult(t)[i];
         }
         for(int i=0; i<hiddenState.length; i++) {
-            hiddenState[i]= (float) (TANH.calc(cellState[i]) * outputGate.getResult()[i]);
+            hiddenState[i]= (float) (TANH.calc(cellState[i]) * outputGate.getResult(t)[i]);
         }
         z= new float[wY.length];            //<z> ist public; often called raw values; also known as Logit.
         for(int l=0; l<wY.length; l++) {
@@ -204,19 +269,19 @@ public class LSTM_cell {
 
     /**
      * @post <hiddenState> and <cellState> modified */
-    public void forward() {
+    public void forward(int t) {
         // sowohl cellState[] als auch hiddenState[] müssen vom Resultat der vorherigen Zelle übernommen werden
 //        hiddenState= prevCell.dHSt();
 //        cellState= prevCell.dCSt();
-        for(int g=0; g<forgetGate.getResult().length; g++) {
+        for(int g=0; g<forgetGate.getResult(t).length; g++) {
             for (int i = 0; i < cellState.length; i++) {
-                cellState[i] *= forgetGate.getResult()[g];
+                cellState[i] *= forgetGate.getResult(t)[g];
             }
             for(int i=0; i<cellState.length; i++) {
-                cellState[i]+=inputGate.getResult()[g] * candidateGate.getResult()[g];
+                cellState[i]+=inputGate.getResult(t)[g] * candidateGate.getResult(t)[g];
             }
             for(int i=0; i<hiddenState.length; i++) {
-                hiddenState[i]= (float) (TANH.calc(cellState[i]) * outputGate.getResult()[g]);
+                hiddenState[i]= (float) (TANH.calc(cellState[i]) * outputGate.getResult(t)[g]);
             }
         }
     }
@@ -225,8 +290,8 @@ public class LSTM_cell {
      * @param xt    the input[t]
      * @param Xt    the concatenation of xt and HS[t-1]
      * @param wY    */
-    public void backpropagate(float[]xt, float[]Xt, float[][]wY) {
-        float[]lMulWy= new float[outputGate.getResult().length];                                                        //first parameter of any partial derivative[lstm]
+    public void backpropagate(float[]xt, float[]Xt, float[][]wY, int t) {
+        float[]lMulWy= new float[outputGate.getResult(t).length];                                                        //first parameter of any partial derivative[lstm]
         for(int l=0; l<wY.length; l++) {
             for(int c=0; c<wY[l].length; c++) {
                 lMulWy[c]+= delLdelZ[l] * wY[l][c];
@@ -240,14 +305,14 @@ public class LSTM_cell {
         }
         //delLdelWy[][] is calculated
 
-        delLdelWo= new float[outputGate.getResult().length][Xt.length];                                                 //first let's update the weights in the output gate
+        delLdelWo= new float[outputGate.getResult(t).length][Xt.length];                                                 //first let's update the weights in the output gate
         float[]tanhCS= new float[cellState.length];
         for(int i=0; i< cellState.length; i++) {
             tanhCS[i]= (float)TANH.calc(cellState[i]);
         }
-        float[] sigmoidDerivativeOfO= new float[outputGate.getResult().length];
+        float[] sigmoidDerivativeOfO= new float[outputGate.getResult(t).length];
         for(int i=0; i<sigmoidDerivativeOfO.length; i++) {
-            sigmoidDerivativeOfO[i]= (float)SIGMOID_DERIVATIVE.calc(outputGate.getResult()[i]);
+            sigmoidDerivativeOfO[i]= (float)SIGMOID_DERIVATIVE.calc(outputGate.getResult(t)[i]);
         }
         for(int l=0; l<delLdelWo.length; l++) {
             for(int c=0; c< Xt.length; c++) {
@@ -260,22 +325,22 @@ public class LSTM_cell {
                 (float)SIGMOID_DERIVATIVE.calc(bO[1])};
 
         for(int i=0; i< delLbO.length; i++) {
-            delLbO[i] = lMulWy[i] * outputGate.getResult()[i] * tanhCS[i] * sigmoidDerivativeOfOsBias[i] * xt[i];       //partielle Ableitung nach entspr. Bias
+            delLbO[i] = lMulWy[i] * outputGate.getResult(t)[i] * tanhCS[i] * sigmoidDerivativeOfOsBias[i] * xt[i];       //partielle Ableitung nach entspr. Bias
         }
         outputGate.setBias(delLbO);                                                                                     //Bias geupdated
         outputGate.calculateResult();                                                                                   //Auf Basis des geupdateten Output-Gate-Biases wird die Output-Gate-Ausgabe berechnet/aktualisiert
         //...BiasIncrement
 */
-        delLdelWf= new float[forgetGate.getResult().length][Xt.length];
+        delLdelWf= new float[forgetGate.getResult(t).length][Xt.length];
         float[]tanhDerivativeOfCS= new float[cellState.length];
         for(int i=0; i<tanhDerivativeOfCS.length; i++) {
             tanhDerivativeOfCS[i]= (float)TANH_DERIVATIVE.calc(cellState[i]);
         }
-        float[]sigmoidDerivativeOfF= new float[]{   (float)SIGMOID_DERIVATIVE.calc(forgetGate.getResult()[0]),
-                                                    (float)SIGMOID_DERIVATIVE.calc(forgetGate.getResult()[1])};
+        float[]sigmoidDerivativeOfF= new float[]{   (float)SIGMOID_DERIVATIVE.calc(forgetGate.getResult(t)[0]),
+                                                    (float)SIGMOID_DERIVATIVE.calc(forgetGate.getResult(t)[1])};
         for(int l=0; l<delLdelWf.length; l++) {
             for(int c=0; c< Xt.length; c++) {
-                delLdelWf[l][c]= (lMulWy[l]* outputGate.getResult()[l]* tanhDerivativeOfCS[l]+ nextCell.dCSt()[l]) *    //of course DL D CST also needs to consider what is transmitted from the previous state anyway we have expanded d l d cstt so far
+                delLdelWf[l][c]= (lMulWy[l]* outputGate.getResult(t)[l]* tanhDerivativeOfCS[l]+ nextCell.dCSt()[l]) *    //of course DL D CST also needs to consider what is transmitted from the previous state anyway we have expanded d l d cstt so far
                                  prevCell.cellState[l]* sigmoidDerivativeOfF[l]* Xt[c];
             }
         }
@@ -285,20 +350,20 @@ public class LSTM_cell {
                 (float)SIGMOID_DERIVATIVE.calc(bF[1])};
 
         for(int i=0; i< delLbO.length; i++) {
-            delLbF[i]= lMulWy[i] * outputGate.getResult()[i] * tanhDerivativeOfCS[i] * nextCell.dCSt()[i] *
+            delLbF[i]= lMulWy[i] * outputGate.getResult(t)[i] * tanhDerivativeOfCS[i] * nextCell.dCSt()[i] *
                     sigmoidDerivativeOfFsBias[i] * xt[i];                                                               //partielle Ableitung nach entspr. Bias
         }
         forgetGate.setBias(delLbF);                                                                                     //Bias geupdated
         forgetGate.calculateResult();                                                                                   //Auf Basis des geupdateten Forget-Gate-Biases wird die Forget-Gate-Ausgabe berechnet/aktualisiert
         //...BiasIncrement
 */
-        delLdelWi= new float[inputGate.getResult().length][Xt.length];
-        float[]sigmoidDerivativeOfI= new float[]{   (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult()[0]),
-                (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult()[1])};
+        delLdelWi= new float[inputGate.getResult(t).length][Xt.length];
+        float[]sigmoidDerivativeOfI= new float[]{   (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult(t)[0]),
+                (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult(t)[1])};
         for(int l=0; l<delLdelWi.length; l++) {
             for(int c=0; c< Xt.length; c++) {
-                delLdelWi[l][c]= lMulWy[l] * outputGate.getResult()[l] * tanhDerivativeOfCS[l] *
-                                 candidateGate.getResult()[l] * sigmoidDerivativeOfI[l] * Xt[c];
+                delLdelWi[l][c]= lMulWy[l] * outputGate.getResult(t)[l] * tanhDerivativeOfCS[l] *
+                                 candidateGate.getResult(t)[l] * sigmoidDerivativeOfI[l] * Xt[c];
             }
         }
         //delLdelWi[][] is calculated
@@ -307,22 +372,22 @@ public class LSTM_cell {
                 (float)SIGMOID_DERIVATIVE.calc(bI[1])};
 
         for(int i=0; i< delLbI.length; i++) {
-            delLbI[i]= lMulWy[i] * outputGate.getResult()[i] * tanhDerivativeOfCS[i] * cellState[i] *
+            delLbI[i]= lMulWy[i] * outputGate.getResult(t)[i] * tanhDerivativeOfCS[i] * cellState[i] *
                     sigmoidDerivativeOfIsBias[i] * xt[i];                                                               //partielle Ableitung nach entspr. Bias
         }
         inputGate.setBias(delLbI);
         inputGate.calculateResult();
         //...BiasIncrement
 */
-        delLdelWc= new float[candidateGate.getResult().length][Xt.length];
-        float[]tanhDerivativeOfC= new float[candidateGate.getResult().length];
+        delLdelWc= new float[candidateGate.getResult(t).length][Xt.length];
+        float[]tanhDerivativeOfC= new float[candidateGate.getResult(t).length];
         for(int i=0; i<tanhDerivativeOfC.length; i++) {
-            tanhDerivativeOfC[i]= (float)TANH_DERIVATIVE.calc(candidateGate.getResult()[i]);
+            tanhDerivativeOfC[i]= (float)TANH_DERIVATIVE.calc(candidateGate.getResult(t)[i]);
         }
-        for(int l=0; l<candidateGate.getResult().length; l++) {
+        for(int l=0; l<candidateGate.getResult(t).length; l++) {
             for(int c=0; c< Xt.length; c++) {
-                delLdelWc[l][c]= lMulWy[l] * outputGate.getResult()[l] * tanhDerivativeOfCS[l] *
-                                 inputGate.getResult()[l] * tanhDerivativeOfC[l] * Xt[c];
+                delLdelWc[l][c]= lMulWy[l] * outputGate.getResult(t)[l] * tanhDerivativeOfCS[l] *
+                                 inputGate.getResult(t)[l] * tanhDerivativeOfC[l] * Xt[c];
             }
         }
         //delLdelWc[][] is calculated
@@ -331,7 +396,7 @@ public class LSTM_cell {
                 (float)TANH_DERIVATIVE.calc(bC[1])};
 
         for(int i=0; i< delLbC.length; i++) {
-            delLbC[i]= lMulWy[i] * outputGate.getResult()[i] * tanhDerivativeOfCS[i] * inputGate.getResult()[i] *
+            delLbC[i]= lMulWy[i] * outputGate.getResult(t)[i] * tanhDerivativeOfCS[i] * inputGate.getResult(t)[i] *
                     tanhDerivativeOfCsBias[i] * xt[i];                                                                  //partielle Ableitung nach entspr. Bias
         }
         candidateGate.setBias(delLbC);                                                                                  //Bias geupdated
@@ -379,7 +444,7 @@ public class LSTM_cell {
      * @param activeTest    um den Testfall von außen kontrollieren zu können
      */
     public void backpropagateGamma(float[] xt, float[][]wF, float[][]wI, float[][]wC, float[][]wO,
-                                  float[] b, float delLdelHt, int activeTest) {
+                                  float[] b, float delLdelHt, int activeTest, int t) {
         // TODO: 17.04.2026
         //1. Gradient des Output Gates (delO)
         //Zuerst berechnen wir, wie stark der Fehler vom aktuellen Hidden State(h[t]) abhängt:
@@ -392,7 +457,7 @@ public class LSTM_cell {
         for(int i=0; i<cellState.length; i++) {
             delLdelO[i]= delEdelHt[i] * (float)TANH.calc(cellState[i]);
             //Der Gradient vor der Aktivierungsfunktion (Sigmoid) ist:
-            delO[i]= delLdelO[i]* (float)SIGMOID_DERIVATIVE.calc(outputGate.getResult()[0]);
+            delO[i]= delLdelO[i]* (float)SIGMOID_DERIVATIVE.calc(outputGate.getResult(t)[0]);
         }
         for(int i=0; i<wO[0].length; i++) {
             wO[0][i]-= delO[i]* xt[i]* ETA;
@@ -401,13 +466,13 @@ public class LSTM_cell {
         //Der Fehler fließt zurück in den Cell State:
         float[] delLdelC= new float[cellState.length];
         for(int i=0; i<delLdelC.length; i++) {
-            delLdelC[i]= delEdelHt[i]* outputGate.getResult()[0]*(1-(float)Math.pow(TANH.calc(cellState[i]),2));
+            delLdelC[i]= delEdelHt[i]* outputGate.getResult(t)[0]*(1-(float)Math.pow(TANH.calc(cellState[i]),2));
         }
         //3. Gradienten der internen Komponenten (delI, delCellCandidate, delF)
         //Input Gate:
         float[] delI= new float[cellState.length];
         for(int i=0; i<delI.length; i++) {
-            delI[i]= delLdelC[i]* candidateGate.getResult()[0]* (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult()[0]);
+            delI[i]= delLdelC[i]* candidateGate.getResult(t)[0]* (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult(t)[0]);
         }
         for(int i=0; i<wI[0].length; i++) {
             wI[0][i]-= delI[i]* xt[i]* ETA;
@@ -415,7 +480,7 @@ public class LSTM_cell {
         //Cell Candidate:
         float[] delC= new float[cellState.length];
         for(int i=0; i<delC.length; i++) {
-            delC[i]= delLdelC[i]* inputGate.getResult()[0]* (1-(float)Math.pow(TANH.calc(candidateGate.getResult()[0]),2));
+            delC[i]= delLdelC[i]* inputGate.getResult(t)[0]* (1-(float)Math.pow(TANH.calc(candidateGate.getResult(t)[0]),2));
         }
         for(int i=0; i<wC[0].length; i++) {
             wC[0][i]-= delC[i]* xt[i]* ETA;         //Grundsätzlich <GewichtUpdate>:= <Gradient>*<Input>*<ETA>
@@ -432,7 +497,7 @@ public class LSTM_cell {
             }
             //2. Gradient vor der Aktivierungsfunktion(delFNet[])
             for(int i=0; i<delFNet.length; i++) {
-                delFNet[i]= delLdelF[i]* (float)SIGMOID_DERIVATIVE.calc(forgetGate.getResult()[0]);
+                delFNet[i]= delLdelF[i]* (float)SIGMOID_DERIVATIVE.calc(forgetGate.getResult(t)[0]);
             }
             //3. Update der Gewichte für das Forget Gate(wF[][])
             //Die Anpassung der Gewichte berechnet sich wieder durch die Multiplikation mit dem Input
@@ -490,7 +555,7 @@ public class LSTM_cell {
      * @param activeTest    um den Testfall von außen kontrollieren zu können
      */
     public void backpropagateBeta(float[] xt, float[][]wF, float[][]wI, float[][]wC, float[][]wO,
-                                  float[] b, float delLdelHt, int activeTest) {
+                                  float[] b, float delLdelHt, int activeTest, int t) {
         // TODO: 17.04.2026
     //1. Gradient des Output Gates (delO)
       //Zuerst berechnen wir, wie stark der Output-Zustand das Ergebnis beeinflusst:
@@ -499,7 +564,7 @@ public class LSTM_cell {
         for(int i=0; i<cellState.length; i++) {
             delLdelO[i]= delLdelHt * (float)TANH.calc(cellState[i]);
           //Der Gradient vor der Aktivierungsfunktion (Sigmoid) ist:
-            delO[i]= delLdelO[i]* (float)SIGMOID_DERIVATIVE.calc(outputGate.getResult()[0]);
+            delO[i]= delLdelO[i]* (float)SIGMOID_DERIVATIVE.calc(outputGate.getResult(t)[0]);
         }
         for(int i=0; i<wO[0].length; i++) {
             wO[0][i]-= delO[i]* xt[i]* ETA;
@@ -508,13 +573,13 @@ public class LSTM_cell {
       //Der Fehler fließt zurück in den Cell State:
         float[] delLdelC= new float[cellState.length];
         for(int i=0; i<delLdelC.length; i++) {
-            delLdelC[i]= delLdelHt* outputGate.getResult()[0]*(1-(float)Math.pow(TANH.calc(cellState[i]),2));
+            delLdelC[i]= delLdelHt* outputGate.getResult(t)[0]*(1-(float)Math.pow(TANH.calc(cellState[i]),2));
         }
     //3. Gradienten der internen Komponenten (delI, delCellCandidate, delF)
       //Input Gate:
         float[] delI= new float[cellState.length];
         for(int i=0; i<delI.length; i++) {
-            delI[i]= delLdelC[i]* candidateGate.getResult()[0]* (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult()[0]);
+            delI[i]= delLdelC[i]* candidateGate.getResult(t)[0]* (float)SIGMOID_DERIVATIVE.calc(inputGate.getResult(t)[0]);
         }
         for(int i=0; i<wI[0].length; i++) {
             wI[0][i]-= delI[i]* xt[i]* ETA;
@@ -522,7 +587,7 @@ public class LSTM_cell {
       //Cell Candidate:
         float[] delC= new float[cellState.length];
         for(int i=0; i<delC.length; i++) {
-            delC[i]= delLdelC[i]* inputGate.getResult()[0]* (1-(float)Math.pow(TANH.calc(candidateGate.getResult()[0]),2));
+            delC[i]= delLdelC[i]* inputGate.getResult(t)[0]* (1-(float)Math.pow(TANH.calc(candidateGate.getResult(t)[0]),2));
         }
         for(int i=0; i<wC[0].length; i++) {
             wC[0][i]-= delC[i]* xt[i]* ETA;         //Grundsätzlich <GewichtUpdate>:= <Gradient>*<Input>*<ETA>
@@ -539,7 +604,7 @@ public class LSTM_cell {
             }
             //2. Gradient vor der Aktivierungsfunktion(delFNet[])
             for(int i=0; i<delFNet.length; i++) {
-                delFNet[i]= delLdelF[i]* (float)SIGMOID_DERIVATIVE.calc(forgetGate.getResult()[0]);
+                delFNet[i]= delLdelF[i]* (float)SIGMOID_DERIVATIVE.calc(forgetGate.getResult(t)[0]);
             }
             //3. Update der Gewichte für das Forget Gate(wF[][])
             //Die Anpassung der Gewichte berechnet sich wieder durch die Multiplikation mit dem Input

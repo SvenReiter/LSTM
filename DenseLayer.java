@@ -1,4 +1,4 @@
-package lstm2604221130;
+package lstm2605111326;
 
 public class DenseLayer {
     final Func SIGMOID= x-> (float)(1 / (1 + Math.exp(-x[0])));

@@ -1,4 +1,4 @@
-package lstm2604221130;
+package lstm2605111326;
 
 public interface Func {
     double calc(double ...param);

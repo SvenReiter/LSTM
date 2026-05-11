@@ -1,4 +1,4 @@
-package lstm2604221130;
+package lstm2605111326;
 
 import org.junit.jupiter.api.Test;
 
@@ -45,8 +45,9 @@ public class Test_LSTM_cell {
     @Test
     void testResultingWeightAdjustmentsAfterForwarding() {
         float DELTA= 1e-3f;
+        int t=0;
         node.prevCell= prevNode;
-        node.forward(wY);
+        node.forward(wY, t);
         assertArrayEquals( new float[]{0.011f, 0.109f, 0.168f}, node.z, DELTA);
         assertArrayEquals( new float[]{0.305f, 0.337f, 0.358f}, node.yHat, DELTA);
         node.calcLoss(node.yHat, node.y);
@@ -58,16 +59,18 @@ public class Test_LSTM_cell {
         node.nextCell = nextNode;
         node.prevCell = prevNode;
         float DELTA= 1e-3f;
-        node.forward(wY);
+        int t=0;
+        node.forward(wY, t);
         node.calcLoss(node.yHat, node.y);
-        node.backpropagate(node.xt, node.Xt, wY);
+        node.backpropagate(node.xt, node.Xt, wY, t);
         assertEquals(node.getDelLdelW('o')[0][2], 0.009, DELTA);
         assertEquals(node.getDelLdelW('o')[1][2], -0.0087, DELTA);
 
         assertEquals(node.getDelLdelW('i')[0][2], -0.004, DELTA);
         assertEquals(node.getDelLdelW('i')[1][2], -0.014, DELTA);
         assertEquals(node.getDelLdelW('c')[0][2], 0.02, DELTA);
-        assertEquals(node.getDelLdelW('c')[1][2], -0.024, DELTA);
+//TODO  assertEquals(node.getDelLdelW('c')[1][2], -0.024, DELTA);   war es bevor ich LSTM_cell.TANH_DERIVATIVE angepasst habe
+        assertEquals(node.getDelLdelW('c')[1][2], -0.021, DELTA);
 
         assertEquals(node.getDelLdelW('y')[0][0], 0.036, DELTA);
         assertEquals(node.getDelLdelW('y')[0][1], 0.049, DELTA);
@@ -81,37 +84,38 @@ public class Test_LSTM_cell {
     public void checksDecreasingLossesOverTime() {
         node.nextCell = nextNode;
         node.prevCell = prevNode;
+        int t=0;
         float resTotalLossBefore,resTotalLoss= 0;
-        node.forward(wY);
+        node.forward(wY, t);
         node.calcLoss(node.yHat, node.y);                                                                               //The loss becomes delLdelZ[t]
         for(float f:node.delLdelZ) resTotalLoss+=Math.abs(f);
         resTotalLossBefore= resTotalLoss;
         resTotalLoss=0;
-        node.forward(wY);
-        node.calcLoss(node.yHat, node.y);                                                                               //The loss becomes delLdelZ[t]
-        for(float f:node.delLdelZ) resTotalLoss+=Math.abs(f);
-        assertTrue(resTotalLossBefore> resTotalLoss);
-        resTotalLossBefore= resTotalLoss;
-        resTotalLoss=0;
-        node.forward(wY);
+        node.forward(wY, t);
         node.calcLoss(node.yHat, node.y);                                                                               //The loss becomes delLdelZ[t]
         for(float f:node.delLdelZ) resTotalLoss+=Math.abs(f);
         assertTrue(resTotalLossBefore> resTotalLoss);
         resTotalLossBefore= resTotalLoss;
         resTotalLoss=0;
-        node.forward(wY);
+        node.forward(wY, t);
         node.calcLoss(node.yHat, node.y);                                                                               //The loss becomes delLdelZ[t]
         for(float f:node.delLdelZ) resTotalLoss+=Math.abs(f);
         assertTrue(resTotalLossBefore> resTotalLoss);
         resTotalLossBefore= resTotalLoss;
         resTotalLoss=0;
-        node.forward(wY);
+        node.forward(wY, t);
         node.calcLoss(node.yHat, node.y);                                                                               //The loss becomes delLdelZ[t]
         for(float f:node.delLdelZ) resTotalLoss+=Math.abs(f);
         assertTrue(resTotalLossBefore> resTotalLoss);
         resTotalLossBefore= resTotalLoss;
         resTotalLoss=0;
-        node.forward(wY);
+        node.forward(wY, t);
+        node.calcLoss(node.yHat, node.y);                                                                               //The loss becomes delLdelZ[t]
+        for(float f:node.delLdelZ) resTotalLoss+=Math.abs(f);
+        assertTrue(resTotalLossBefore> resTotalLoss);
+        resTotalLossBefore= resTotalLoss;
+        resTotalLoss=0;
+        node.forward(wY, t);
         node.calcLoss(node.yHat, node.y);                                                                               //The loss becomes delLdelZ[t]
         for(float f:node.delLdelZ) resTotalLoss+=Math.abs(f);
         assertTrue(resTotalLossBefore> resTotalLoss);

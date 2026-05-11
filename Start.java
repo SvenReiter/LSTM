@@ -1,4 +1,4 @@
-package lstm2604221130;
+package lstm2605111326;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +22,7 @@ public class Start {
         float[] bI= new float[]{0.f, 0.f};      //Die Biases für die anderen Gates
         float[] bC= new float[]{0.f, 0.f};      //  (Input, Output) und den Zellzustand werden
         float[] bO= new float[]{0.f, 0.f};      //  typischerweise auf 0 gesetzt.
+        int t=0;
 
         /* Architektur wie auf DenseLstmArchitectureConstistsAlsoBatchNormailzationLayer.png gezeigt realisieren
            Es ist so, dass der Input von der ersten cellRow [Xt] entspr.
@@ -126,7 +127,7 @@ public class Start {
         float[][]activations_second= new float[LSTM_cells_layers.get(0).size()][NUMBER_FEATURES];
         for(List<LSTM_cell> cellLayer: LSTM_cells_layers) {
             for(int i=0; i< cellLayer.size(); i++) {
-                cellLayer.get(i).forward(wY);
+                cellLayer.get(i).forward(wY, t);
                 if(cellLayer.equals(LSTM_cells_layers.get(0))) {
                     for(int elm=0; elm<cellLayer.get(i).hiddenState.length; elm++) {
                         for(int f=0; f<NUMBER_FEATURES; f++) {
