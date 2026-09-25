@@ -1,4 +1,4 @@
-package lstm2609250959_BPTT_postActUpreActDuerfenNichtVermischtSein;
+package lstm2609251410;
 
 @FunctionalInterface
 public interface Func {

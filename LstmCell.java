@@ -1,4 +1,4 @@
-package lstm2609250959_BPTT_postActUpreActDuerfenNichtVermischtSein;
+package lstm2609251410;
 
 import java.util.Arrays;
 
@@ -26,14 +26,14 @@ public class LstmCell {
     float[][]iActivated;
     float[][]cActivated;
     float[][]oActivated;
-    float[][]delL_delWf;
-    float[][]delL_delWi;
-    float[][]delL_delWc;
-    float[][]delL_delWo;
-    float[][]delL_delUf;
-    float[][]delL_delUi;
-    float[][]delL_delUc;
-    float[][]delL_delUo;
+    float[][][]delL_delWf;
+    float[][][]delL_delWi;
+    float[][][]delL_delWc;
+    float[][][]delL_delWo;
+    float[][][]delL_delUf;
+    float[][][]delL_delUi;
+    float[][][]delL_delUc;
+    float[][][]delL_delUo;
     float[][]hs_t,cs_t;
     float[]hs_prev,cs_prev;
     float fBeta, fGamma;
@@ -69,6 +69,14 @@ public class LstmCell {
         iActivated= new float[timesteps][];
         cActivated= new float[timesteps][];
         oActivated= new float[timesteps][];
+        delL_delWf= new float[timesteps][][];
+        delL_delWi= new float[timesteps][][];
+        delL_delWc= new float[timesteps][][];
+        delL_delWo= new float[timesteps][][];
+        delL_delUf= new float[timesteps][][];
+        delL_delUi= new float[timesteps][][];
+        delL_delUc= new float[timesteps][][];
+        delL_delUo= new float[timesteps][][];
         cs_t= new float[timesteps][];
         hs_t= new float[timesteps][];
     }
@@ -120,7 +128,7 @@ public class LstmCell {
      * @post Resulting the gates deltas in reference to target
      * @return resulting delL_delHSprev[] and delL_delCSprev[] */
     float[][]backwardPass(int timestep, LossFunc lossFunc, float[]yt, float[]x,
-                        float[]f_normAct, float[]i_normAct, float[]c_normAct, float[]o_normAct) {
+                          float[]f_normAct, float[]i_normAct, float[]c_normAct, float[]o_normAct) {
         float[]delL_delHS= lossFunc.calc(hs_t[timestep], yt);
         float[]delL_delCS= calcCsGradient(delL_delHS, o_normAct, cs_t[timestep]);
 
@@ -165,10 +173,10 @@ public class LstmCell {
                                                 fScaledAndMoved[timestep], iScaledAndMoved[timestep],
                                                 cScaledAndMoved[timestep], oScaledAndMoved[timestep]);
         // DONE: 16.09.2026 Berechnung räumlicher Matrix-Gradienten via äußeres Produkt
-        delL_delWf= dyadicProduct(Arrays.copyOfRange(preNormGradients, 0, 2), x);
-        delL_delWi= dyadicProduct(Arrays.copyOfRange(preNormGradients, 2, 4), x);
-        delL_delWc= dyadicProduct(Arrays.copyOfRange(preNormGradients, 4, 6), x);
-        delL_delWo= dyadicProduct(Arrays.copyOfRange(preNormGradients, 6, 8), x);
+        delL_delWf[timestep]= dyadicProduct(Arrays.copyOfRange(preNormGradients, 0, 2), x);
+        delL_delWi[timestep]= dyadicProduct(Arrays.copyOfRange(preNormGradients, 2, 4), x);
+        delL_delWc[timestep]= dyadicProduct(Arrays.copyOfRange(preNormGradients, 4, 6), x);
+        delL_delWo[timestep]= dyadicProduct(Arrays.copyOfRange(preNormGradients, 6, 8), x);
         /*IMPORTANT: Nachtraeglich werden die f-/i-/c-/o-GewichtMatrizen per Delta-Regel geupdatet
                      wF(neu)= wF- ETA*delL_delWf
                      wI(neu)= wI- ETA*delL_delWi
@@ -176,10 +184,10 @@ public class LstmCell {
                      wO(neu)= wO- ETA*delL_delWo
          */
 
-        delL_delUf= dyadicProduct(Arrays.copyOfRange(preNormGradients, 0, 2), hs_prev);     //TODO: 20.09.2026 hs_prev wegoptimieren:= hs_t[timestep-1]
-        delL_delUi= dyadicProduct(Arrays.copyOfRange(preNormGradients, 2, 4), hs_prev);     //TODO: 20.09.2026 hs_prev wegoptimieren:= hs_t[timestep-1]
-        delL_delUc= dyadicProduct(Arrays.copyOfRange(preNormGradients, 4, 6), hs_prev);     //TODO: 20.09.2026 hs_prev wegoptimieren:= hs_t[timestep-1]
-        delL_delUo= dyadicProduct(Arrays.copyOfRange(preNormGradients, 6, 8), hs_prev);     //TODO: 20.09.2026 hs_prev wegoptimieren:= hs_t[timestep-1]
+        delL_delUf[timestep]= dyadicProduct(Arrays.copyOfRange(preNormGradients, 0, 2), hs_prev);     //TODO: 20.09.2026 hs_prev wegoptimieren:= hs_t[timestep-1]
+        delL_delUi[timestep]= dyadicProduct(Arrays.copyOfRange(preNormGradients, 2, 4), hs_prev);     //TODO: 20.09.2026 hs_prev wegoptimieren:= hs_t[timestep-1]
+        delL_delUc[timestep]= dyadicProduct(Arrays.copyOfRange(preNormGradients, 4, 6), hs_prev);     //TODO: 20.09.2026 hs_prev wegoptimieren:= hs_t[timestep-1]
+        delL_delUo[timestep]= dyadicProduct(Arrays.copyOfRange(preNormGradients, 6, 8), hs_prev);     //TODO: 20.09.2026 hs_prev wegoptimieren:= hs_t[timestep-1]
         /*IMPORTANT: Nachtraeglich werden die f-/i-/c-/o-rekurrenten GewichtMatrizen per Delta-Regel geupdatet
                      uF(neu)= uF- ETA*delL_delUf
                      uI(neu)= uI- ETA*delL_delUi

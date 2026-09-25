@@ -1,9 +1,84 @@
-package lstm2609250959_BPTT_postActUpreActDuerfenNichtVermischtSein;
+package lstm2609251410;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class LstmCellTest {
+
+    @Test
+    void testsLstmMitJointLayerNormalizationVollstaendigesBptt() {
+        float[]h0= new float[]{0f, 0f};
+        float[]c0= new float[]{0f, 0f};
+
+        float[][] wf = new float[][]{{0.4f, 0.1f, 0.0f}, {-0.3f, 0.2f,  0.1f}};
+        float[][] uf = new float[][]{{0.2f, -0.1f}, {0.0f, 0.4f}};
+        float[][] wi = new float[][]{{0.2f, -0.1f, 0.3f}, {0.1f, 0.4f,  -0.2f}};
+        float[][] ui = new float[][]{{0.1f, 0.2f}, {-0.1f, 0.3f}};
+        float[][] wc = new float[][]{{-0.2f, 0.3f, 0.1f}, {0.1f, -0.1f,  0.5f}};
+        float[][] uc = new float[][]{{0.3f, 0.0f}, {-0.2f, 0.1f}};
+        float[][] wo = new float[][]{{0.1f, -0.2f, 0.4f}, {0.3f, 0.1f,  -0.1f}};
+        float[][] uo = new float[][]{{-0.1f, 0.2f}, {0.1f, 0.3f}};
+        float[] xt1= new float[]{1f, 0f, -1f};
+
+        LstmCell cell= new LstmCell(2, wf, wi, wc, wo, uf, ui, uc, uo);
+        cell.hs_prev= new float[]{0.f, 0.f};
+        cell.cs_prev= new float[]{0.f, 0.f};
+        int TIME_STEP= 0;
+        int TIME_STEPS= 1;
+        cell.forwardPass(TIME_STEP, xt1);
+        //Schritt A: Lineare Kombination (Pre-Activation)   getestet von testsLstmMitJointLayerNormalizationVerkuerzt()
+        //Schritt B: Joint Layer Normalization              getestet von testsLstmMitJointLayerNormalizationVerkuerzt()
+        //Schritt C: Splitten und Aktivierungsfunktionen    getestet von testsLstmMitJointLayerNormalizationVerkuerzt()
+        //Schritt D: Update der States (c1 und h1)          getestet von testsLstmMitJointLayerNormalizationVerkuerzt()
+
+        float[] target= new float[]{0f, 0f};
+        // DONE: 22.09.2026 Natürlich resultiert hier ein Fehler-Vektor: Fehler pro Feature-Kombination
+        LossFunc MSE= (hs, y) -> {
+            float[] res= new float[hs.length];
+            for(int i=0; i< res.length; i++) {
+                res[i]= hs[i]-y[i];
+                res[i]*= 2;
+            }
+            return res;
+        };
+        float[][]bpttRes= cell.backwardPass(TIME_STEP, MSE, target, xt1, cell.fActivated[TIME_STEP], cell.iActivated[TIME_STEP], cell.cActivated[TIME_STEP], cell.oActivated[TIME_STEP]);
+        Adam adam= new Adam(TIME_STEPS, cell.delL_delWf[TIME_STEP], wf);
+        float[][]optimizedWeights= adam.calc(TIME_STEP+1, cell.delL_delWf[TIME_STEP], wf);
+        Assertions.assertEquals(0.401f, optimizedWeights[0][0], 1e-04);
+        Assertions.assertEquals(0.1f, optimizedWeights[0][1], 1e-04);
+        Assertions.assertEquals(-0.001f, optimizedWeights[0][2], 1e-04);
+        Assertions.assertEquals(-0.301f, optimizedWeights[1][0], 1e-04);
+        Assertions.assertEquals(0.2f, optimizedWeights[1][1], 1e-04);
+        Assertions.assertEquals(0.101f, optimizedWeights[1][2], 1e-04);
+        /* TODO: 25.09.2026
+            1.) Bei längeren Sequenzen (t>1) : Die Schleife läuft weiter
+                Wenn deine Sequenz zum Beispiel aus 5 Zeitschriften besteht,
+                bist du jetzt erst am Ende von Schritt 1 angekommen:
+                    Rekursive Weiterführung:
+                        Du nimmst die eben berechneten Gradienten delL/delHS(t:0) und delL/delCS(t:0) und
+                        steckst sie als neuen "Start-Fehler" in den nächsten Zeitschritt weiter links (t:0).
+                    Gradienten-Akkumulation:
+                        Da die Gewichte/-Matrizen W* und U* über die gesamte Sequenz hinweg geteilt/geshared werden,
+                        musst du die Gradienten (grad_W und grad_U) aus allen Zeitschriften aufsummieren:
+                            W_total= delL_delWf(t)+ delL_delWi(t)+ delL_delWc(t)+ delL_delWo(t)
+                            U_total= delL_delUf(t)+ delL_delUi(t)+ delL_delUc(t)+ delL_delUo(t)
+            2.) Nach dem vollständigen BPTT: Der Optimierungs-Schritt
+                Sobald du den Fehler durch die gesamte Sequenz (alle Zeitschritte) geworfen und
+                die finalen Gradienten zusammengefasst hast, kommt der eigentliche Lernschritt des Netzes:
+                    Gewichtsaktualisierung (Weight Update):
+                        Ein Optimizer (wie Adam oder Stochastic Gradient Descent) nutzt die berechneten Gradienten,
+                        um die Gewichtsmatrizen W und U anzupassen:
+                            W_neu = W_alt - η * W_total
+            *
+            Zusammenfassung:
+                Für diesen einen Zeitschritt:
+                    Bist du fertig!
+                    Die Gradienten für W und U liegen vor.
+                Für das gesamte Training:
+                    Jetzt würden die Gradienten an den Optimizer übergeben werden und das Netz beginnt im nächsten
+                    Epoch wieder von vorn mit dem nächsten Forward-Pass.
+         */
+    }
 
     @Test
     void testsLstmMitJointLayerNormalizationVerkuerzt() {
@@ -19,7 +94,7 @@ public class LstmCellTest {
         float[][] wo = new float[][]{{0.1f, -0.2f, 0.4f}, {0.3f, 0.1f,  -0.1f}};
         float[][] uo = new float[][]{{-0.1f, 0.2f}, {0.1f, 0.3f}};
         float[] xt1= new float[]{1f, 0f, -1f};
-//        float[] xt2= new float[]{0.5f, 1f, 0f};
+
         LstmCell cell= new LstmCell(2, wf, wi, wc, wo, uf, ui, uc, uo);
         cell.hs_prev= new float[]{0.f, 0.f};
         cell.cs_prev= new float[]{0.f, 0.f};
@@ -63,7 +138,7 @@ public class LstmCellTest {
         Assertions.assertEquals(-0.4124f, cell.hs_t[TIME_STEP][1], 1e-03);
 
         float[] target= new float[]{0f, 0f};
-        // DONE: 22.09.2026 Natürlich resultiert hier ein Fehler-Vektor: Fehler pro Feature-Kombination
+        // DONE: 22.09.2026 Natürlich resultiert hier ein Fehler-Vektor: Fehler-Vektor pro Feature(-Kombination)
         LossFunc MSE= (hs, y) -> {
             float[] res= new float[hs.length];
             for(int i=0; i< res.length; i++) {
@@ -77,59 +152,59 @@ public class LstmCellTest {
         Assertions.assertEquals(0.107f, bpttRes[0][1], 1e-03);
         Assertions.assertEquals(-0.043f, bpttRes[1][0], 1e-04);
         Assertions.assertEquals(-0.1241f, bpttRes[1][1], 1e-03);
-        Assertions.assertEquals(-0.1603f, cell.delL_delWf[0][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delWf[0][1], 1e-03);
-        Assertions.assertEquals(0.1603f, cell.delL_delWf[0][2], 1e-03);
-        Assertions.assertEquals(0.1191f, cell.delL_delWf[1][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delWf[1][1], 1e-03);
-        Assertions.assertEquals(-0.1191f, cell.delL_delWf[1][2], 1e-03);
+        Assertions.assertEquals(-0.1603f, cell.delL_delWf[TIME_STEP][0][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delWf[TIME_STEP][0][1], 1e-03);
+        Assertions.assertEquals(0.1603f, cell.delL_delWf[TIME_STEP][0][2], 1e-03);
+        Assertions.assertEquals(0.1191f, cell.delL_delWf[TIME_STEP][1][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delWf[TIME_STEP][1][1], 1e-03);
+        Assertions.assertEquals(-0.1191f, cell.delL_delWf[TIME_STEP][1][2], 1e-03);
         Assertions.assertEquals(0.107f, bpttRes[0][1], 1e-03);
         Assertions.assertEquals(-0.043f, bpttRes[1][0], 1e-04);
 
-        Assertions.assertEquals(0.0397f, cell.delL_delWi[0][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delWi[0][1], 1e-03);
-        Assertions.assertEquals(-0.0397f, cell.delL_delWi[0][2], 1e-03);
-        Assertions.assertEquals(0.0881f, cell.delL_delWi[1][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delWi[1][1], 1e-03);
-        Assertions.assertEquals(-0.0881f, cell.delL_delWi[1][2], 1e-03);
+        Assertions.assertEquals(0.0397f, cell.delL_delWi[TIME_STEP][0][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delWi[TIME_STEP][0][1], 1e-03);
+        Assertions.assertEquals(-0.0397f, cell.delL_delWi[TIME_STEP][0][2], 1e-03);
+        Assertions.assertEquals(0.0881f, cell.delL_delWi[TIME_STEP][1][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delWi[TIME_STEP][1][1], 1e-03);
+        Assertions.assertEquals(-0.0881f, cell.delL_delWi[TIME_STEP][1][2], 1e-03);
 
-        Assertions.assertEquals(0.0392f, cell.delL_delWc[0][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delWc[0][1], 1e-03);
-        Assertions.assertEquals(-0.0392f, cell.delL_delWc[0][2], 1e-03);
-        Assertions.assertEquals(-0.2926f, cell.delL_delWc[1][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delWc[1][1], 1e-03);
-        Assertions.assertEquals(0.2926f, cell.delL_delWc[1][2], 1e-03);
+        Assertions.assertEquals(0.0392f, cell.delL_delWc[TIME_STEP][0][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delWc[TIME_STEP][0][1], 1e-03);
+        Assertions.assertEquals(-0.0392f, cell.delL_delWc[TIME_STEP][0][2], 1e-03);
+        Assertions.assertEquals(-0.2926f, cell.delL_delWc[TIME_STEP][1][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delWc[TIME_STEP][1][1], 1e-03);
+        Assertions.assertEquals(0.2926f, cell.delL_delWc[TIME_STEP][1][2], 1e-03);
 
-        Assertions.assertEquals(0.1181f, cell.delL_delWo[0][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delWo[0][1], 1e-03);
-        Assertions.assertEquals(-0.1181f, cell.delL_delWo[0][2], 1e-03);
-        Assertions.assertEquals(0.0487f, cell.delL_delWo[1][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delWo[1][1], 1e-03);
-        Assertions.assertEquals(-0.0487f, cell.delL_delWo[1][2], 1e-03);
+        Assertions.assertEquals(0.1181f, cell.delL_delWo[TIME_STEP][0][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delWo[TIME_STEP][0][1], 1e-03);
+        Assertions.assertEquals(-0.1181f, cell.delL_delWo[TIME_STEP][0][2], 1e-03);
+        Assertions.assertEquals(0.0487f, cell.delL_delWo[TIME_STEP][1][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delWo[TIME_STEP][1][1], 1e-03);
+        Assertions.assertEquals(-0.0487f, cell.delL_delWo[TIME_STEP][1][2], 1e-03);
 
         /*IMPORTANT Hinweis: Das ist völlig korrekt für den ersten Zeitschritt ($t=1$), da ein Nullvektor als
            Start-Hidden-State keine historischen Einflüsse über die $U$-Matrizen transportieren kann.
            Erst ab t:2 (wenn HS(t) != 0) liefert grad_U Werte ungleich Null.*/
-        Assertions.assertEquals(0.0f, cell.delL_delUf[0][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUf[0][1], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUf[1][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUf[1][1], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUf[TIME_STEP][0][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUf[TIME_STEP][0][1], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUf[TIME_STEP][1][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUf[TIME_STEP][1][1], 1e-03);
 
-        Assertions.assertEquals(0.0f, cell.delL_delUi[0][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUi[0][1], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUi[1][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUi[1][1], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUi[TIME_STEP][0][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUi[TIME_STEP][0][1], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUi[TIME_STEP][1][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUi[TIME_STEP][1][1], 1e-03);
 
-        Assertions.assertEquals(0.0f, cell.delL_delUc[0][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUc[0][1], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUc[1][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUc[1][1], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUc[TIME_STEP][0][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUc[TIME_STEP][0][1], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUc[TIME_STEP][1][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUc[TIME_STEP][1][1], 1e-03);
 
-        Assertions.assertEquals(0.0f, cell.delL_delUo[0][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUo[0][1], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUo[1][0], 1e-03);
-        Assertions.assertEquals(0.0f, cell.delL_delUo[1][1], 1e-03);
-        
+        Assertions.assertEquals(0.0f, cell.delL_delUo[TIME_STEP][0][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUo[TIME_STEP][0][1], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUo[TIME_STEP][1][0], 1e-03);
+        Assertions.assertEquals(0.0f, cell.delL_delUo[TIME_STEP][1][1], 1e-03);
+
         Assertions.assertEquals(0.107f, bpttRes[0][1], 1e-03);
         Assertions.assertEquals(-0.043f, bpttRes[1][0], 1e-04);
     }
@@ -273,6 +348,8 @@ public class LstmCellTest {
         Assertions.assertEquals(-0.3f, cell.oNetto[TIME_STEP][0], 1e-02);
         Assertions.assertEquals(0.25f, cell.oNetto[TIME_STEP][1], 1e-02);
 
+        /* IMPORTANT: 25.09.2026 Ich glaube es liegt daran, dass ich im Gemini-Rechenbsp nicht erwähnt habe,
+                                 dass es sich um Joint Layer Normalization hadelt*/
         Assertions.assertEquals(1f, cell.fScaledAndMoved[TIME_STEP][0], 1e-02);
         Assertions.assertEquals(-1f, cell.fScaledAndMoved[TIME_STEP][1], 1e-02);
         Assertions.assertEquals(-1f, cell.iScaledAndMoved[TIME_STEP][0], 1e-02);
